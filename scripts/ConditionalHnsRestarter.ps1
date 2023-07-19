@@ -48,7 +48,7 @@ $g_scriptStartTime = get-date
 $g_endpointInfoMap = @{} # key = id, value = EndpointInfo
 $g_ruleCheckList = @() # array of RuleCheckInfo objects
 $g_hnsRestartCount = 0
-$g_lastHnsRestartTime = get-date
+$g_lastHnsRestartTime = g_scriptStartTime
 
 function RulesAreMissing() {
     $vfpPortsIdList = ((vfpctrl /list-vmswitch-port /format 1 | convertfrom-json).Ports | select id)
@@ -79,7 +79,9 @@ function CheckIfRestartRequired()
     return $false
 }
 
-function collectLogsAndRestartHns()
+function collectLogsAndRestartHns(
+    [string]$LogsPath
+)
 {
 }
 
@@ -100,10 +102,18 @@ function myMain() {
             sleep ($SleepIntervalMins * 60)
             continue
         }
+        elseif ((current_time - g_lastHnsRestartTime).Minutes -lt $MinRestartInterval) {
+            # TODO: log("HNS restarted recently. Let's wait more.")
+            sleep ((current_time - g_lastHnsRestartTime).TotalSeconds)
+            continue
+        }
         elseif ($g_hnsRestartCount -eq 0)
         {
             # TODO: log("")
             collectLogsAndRestartHns -LogsPath $WindowsLogsPath
+            $g_lastHnsRestartTime = get-date
+            $g_hnsRestartCount += 1
+
             sleep ($SleepIntervalMins * 60)
             continue
         }
